@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DBXフォトビューア</string>
+    <string name="settings">設定</string>
+    <string name="pick_folder">フォルダを選択</string>
+    <string name="login_message">Dropbox に接続すると、指定したフォルダの写真と動画を閲覧できます。\nこのアプリはファイルの変更・削除を行いません。</string>
+    <string name="login_button">Dropbox に接続</string>
+    <string name="empty_message">表示できる写真や動画がありません。\n設定で対象フォルダを確認してください。</string>
+    <string name="select_this_folder">このフォルダを選択</string>
+    <string name="menu_group">表示単位</string>
+    <string name="group_day">日</string>
+    <string name="group_month">月</string>
+    <string name="group_year">年</string>
+    <string name="menu_media">表示種別</string>
+    <string name="media_all">すべて</string>
+    <string name="media_photo">写真のみ</string>
+    <string name="media_video">動画のみ</string>
+    <string name="menu_refresh">更新</string>
+    <string name="play_video">動画を再生</string>
+</resources>

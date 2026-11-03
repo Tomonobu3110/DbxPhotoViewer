@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="表示対象">
+        <Preference
+            app:key="pref_folder"
+            app:persistent="false"
+            app:title="対象フォルダ" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="recursive"
+            app:summaryOff="指定したフォルダの直下だけを表示"
+            app:summaryOn="指定したフォルダの下の階層もすべて表示"
+            app:title="サブフォルダも探索" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="exclude_small"
+            app:summary="公式アプリと同じく、15KB 未満の画像と PNG を表示しない"
+            app:title="小さい画像と PNG を除外" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="その他">
+        <Preference
+            app:key="pref_clear_cache"
+            app:persistent="false"
+            app:summary="サムネイルとプレビューのキャッシュを削除"
+            app:title="キャッシュを削除" />
+
+        <Preference
+            app:key="pref_logout"
+            app:persistent="false"
+            app:title="ログアウト" />
+    </PreferenceCategory>
+</PreferenceScreen>

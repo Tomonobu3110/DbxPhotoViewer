@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RecyclerView の fastScroll は StateListDrawable を要求する -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="3dp" />
+            <solid android:color="@color/scroll_thumb" />
+            <size android:width="6dp" android:height="48dp" />
+        </shape>
+    </item>
+</selector>

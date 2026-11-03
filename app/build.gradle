@@ -1,0 +1,82 @@
+plugins {
+    alias(libs.plugins.android.application)
+}
+
+// Dropbox の App key は local.properties の dropbox.appKey から読む(Git に入れない)
+def localProps = new Properties()
+def localFile = rootProject.file('local.properties')
+if (localFile.exists()) {
+    localFile.withInputStream { localProps.load(it) }
+}
+def dropboxKey = localProps.getProperty('dropbox.appKey', '')
+
+android {
+    namespace 'jp.photoviewer.dbx'
+    compileSdk {
+        version = release(36)
+    }
+
+    defaultConfig {
+        applicationId "jp.photoviewer.dbx"
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders = [dropboxKey: dropboxKey]
+        buildConfigField 'String', 'DROPBOX_APP_KEY', "\"${dropboxKey}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE*', 'META-INF/NOTICE*']
+        }
+    }
+}
+
+dependencies {
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.activity
+    implementation libs.constraintlayout
+
+    // Dropbox
+    implementation libs.dropbox.core
+    implementation libs.dropbox.android
+
+    // AndroidX
+    implementation libs.recyclerview
+    implementation libs.viewpager2
+    implementation libs.swiperefreshlayout
+    implementation libs.preference
+    implementation libs.lifecycle.viewmodel
+    implementation libs.lifecycle.livedata
+
+    // Room
+    implementation libs.room.runtime
+    annotationProcessor libs.room.compiler
+
+    // ピンチズーム対応の画像表示
+    implementation libs.subsampling.scale.image.view
+
+    testImplementation libs.junit
+    androidTestImplementation libs.ext.junit
+    androidTestImplementation libs.espresso.core
+}

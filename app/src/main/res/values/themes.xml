@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DbxPhotoViewer" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand</item>
+    </style>
+
+    <style name="Theme.DbxPhotoViewer.Viewer">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

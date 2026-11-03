@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_group"
+        android:icon="@drawable/ic_grid"
+        android:title="@string/menu_group"
+        app:showAsAction="ifRoom">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item android:id="@+id/group_day" android:title="@string/group_day" />
+                <item android:id="@+id/group_month" android:title="@string/group_month" />
+                <item android:id="@+id/group_year" android:title="@string/group_year" />
+            </group>
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/menu_media"
+        android:title="@string/menu_media"
+        app:showAsAction="never">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item android:id="@+id/media_all" android:title="@string/media_all" />
+                <item android:id="@+id/media_photo" android:title="@string/media_photo" />
+                <item android:id="@+id/media_video" android:title="@string/media_video" />
+            </group>
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/menu_refresh"
+        android:title="@string/menu_refresh"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_settings"
+        android:title="@string/settings"
+        app:showAsAction="never" />
+</menu>

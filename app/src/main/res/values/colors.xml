@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#0061FE</color>
+    <color name="cell_placeholder">#1F808080</color>
+    <color name="badge_bg">#80000000</color>
+    <color name="viewer_overlay">#99000000</color>
+    <color name="scroll_thumb">#B0808080</color>
+    <color name="scroll_track">#20808080</color>
+</resources>
