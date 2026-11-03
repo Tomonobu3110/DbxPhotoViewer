@@ -43,7 +43,7 @@ Dropbox SDK を 8.x にしないのは、8.x が Java 21 を必要とするた�
 
 ## Claude と作業するときの注意
 
-- Claude は PC 上でコマンドを実行できない(ファイルの読み書きだけ)。**ビルドと実行は自分で行う**
+- Claude のクラウド作業環境ではコマンドを実行できない(ファイルの読み書きだけ)。この場合は**ビルドと実行は自分で行う**。Maven リポジトリにも接続できないため、コンパイルエラーは PC 側のビルドで見つかる
+- **ローカルの Claude Code(PC 上で動くエージェント)はコマンドを実行できる。** `JAVA_HOME` を Android Studio 同梱の JBR(`C:\Program Files\Android\Android Studio\jbr`)に設定すれば、`./gradlew.bat :app:compileDebugJavaWithJavac` や `:app:assembleDebug` でコンパイル確認ができる(2026-11-04 のスライドショー追加作業で確認)。ただし実機での動作確認(Dropbox 同期・動画再生など)とインストールは引き続き自分で行う
 - **Claude が書き換えるファイルは、Android Studio で開いたままにしない。** 開いていると、エディタの古い内容で上書きされることがある(debug.md D1)
 - 不具合の調査には Logcat が役に立つ。タグ `ThumbnailApi` / `ThumbnailLoader` / `SyncManager` / `PreviewLoader` で絞り込める
-- Claude のクラウド作業環境では Maven リポジトリに接続できず、ビルドの確認ができない。コンパイルエラーは PC 側のビルドで見つかる

@@ -22,6 +22,13 @@ public interface PhotoDao {
             + "ORDER BY sort_time DESC, name DESC")
     LiveData<List<PhotoEntity>> observe(int excludeSmall, int media);
 
+    /** スライドショーの再起動用。observe() と同じ条件・並びを一度だけ取得する。 */
+    @Query("SELECT * FROM photos WHERE "
+            + "(:excludeSmall = 0 OR is_video = 1 OR (size >= 15360 AND ext != 'png')) "
+            + "AND (:media = 0 OR (:media = 1 AND is_video = 0) OR (:media = 2 AND is_video = 1)) "
+            + "ORDER BY sort_time DESC, name DESC")
+    List<PhotoEntity> listOnce(int excludeSmall, int media);
+
     @Query("SELECT * FROM photos WHERE id IN (:ids)")
     List<PhotoEntity> findByIds(List<String> ids);
 

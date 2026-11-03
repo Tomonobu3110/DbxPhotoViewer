@@ -2,16 +2,21 @@ package jp.photoviewer.dbx.ui;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.SystemBarStyle;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import android.content.ActivityNotFoundException;
 import android.graphics.Color;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -42,6 +47,7 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
     private TextView infoPath;
     private MaterialToolbar toolbar;
     private boolean overlayVisible = true;
+    private ActivityResultLauncher<Intent> slideshowLauncher;
 
     public static void start(Context context, List<PhotoEntity> photos, int position) {
         pendingPhotos = photos;
@@ -64,6 +70,21 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
             return;
         }
         setContentView(R.layout.activity_viewer);
+
+        slideshowLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() != RESULT_OK || result.getData() == null) return;
+                    String id = result.getData().getStringExtra(SlideshowActivity.EXTRA_RESULT_PHOTO_ID);
+                    if (id == null) return;
+                    // スライドショーが Dropbox の更新を取り込んで一覧を入れ替えている場合があるので、
+                    // 位置ではなく ID でこの画面のリスト内を探す。
+                    for (int i = 0; i < photos.size(); i++) {
+                        if (photos.get(i).id.equals(id)) {
+                            pager.setCurrentItem(i, false);
+                            break;
+                        }
+                    }
+                });
 
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -108,6 +129,21 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
         if (p.isVideo && p.durationMs != null) date += " ・ " + Formats.duration(p.durationMs);
         infoDate.setText(date);
         infoPath.setText(p.parentDisplay());
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_viewer, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.menu_slideshow) {
+            SlideshowActivity.start(this, slideshowLauncher, photos, pager.getCurrentItem());
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override

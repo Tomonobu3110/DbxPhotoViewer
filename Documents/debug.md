@@ -53,6 +53,26 @@
 - 仮説: 撮影日時(media_info)が取れなかった写真が、ファイルの更新日時(client_modified)で 9 月に並んでいる。公式は別の基準で並べている可能性
 - 次の調査: 9月の中で Web に出ていない写真をビューアで開き、日付の後ろに「(更新日時)」と出るか確認する
 
+## D10. スライドショーで動画がくるくるのままで再生されない — 解決済
+
+- 現象: `SlideshowActivity` で動画のスライドになると、プログレス表示のまま止まり `onPrepared` が呼ばれない
+- 原因: `VideoView`(内部で `SurfaceView` を使う)を `visibility="gone"` のまま `setVideoURI()` していた。GONE なビューはレイアウトされず `Surface` が生成されないため、`MediaPlayer` の再生準備がいつまでも進まなかった
+- 対応: 動画のリンク取得を始める前に `videoView.setVisibility(View.VISIBLE)` にしておく(見た目はプログレスバーで覆われる)。`SlideshowActivity.showSlide()` 参照
+
+## D11. スライドショーの動画が画面中央に表示されない — 対応済・未確認
+
+- 現象: 動画が画面の左上寄りに表示される
+- 原因: `VideoView` は `onMeasure` で動画のアスペクト比に合わせて自分のサイズを縮める。`FrameLayout` の子はデフォルトで左上寄せのため、縮んだ分だけ左上にずれて見えていた
+- 対応: レイアウトの `video_view` に `android:layout_gravity="center"` を追加
+
+## D12. スライドショーのメニュー項目が見つからない/見えにくい — 対応済・未確認
+
+- 現象: 「スライドショー開始」を `app:showAsAction="never"` でオーバーフローメニュー(「…」)に入れたが、ユーザーが見つけられなかった
+- 一時対応: `always|withText` に変更してツールバーに直接表示したが、「元のオーバーフローの中の方がよかった」とのことで再度 `never` に戻した
+- 原因(見えにくさ): ビューアのツールバーは `ThemeOverlay.Material3.Dark.ActionBar` を当てているが、オーバーフローのドロップダウン(ポップアップ)の配色はツールバー本体とは別に、アプリ全体のテーマ(Light 側)から決まる。素の状態でも読めるはずだが、念のため配色を固定した
+- 対応: ツールバーに `app:popupTheme="@style/ThemeOverlay.Material3.Light"` を指定し、オーバーフローのドロップダウンを明るい配色(黒文字/白背景)に固定した
+- 教訓: ダークテーマの画面にオーバーフローメニューを置くときは、ドロップダウンの配色を `popupTheme` で明示しておくと安全
+
 ## 作業環境起因の問題(参考)
 
 - Claude のクラウド作業環境からは Google Maven / Maven Central / Gradle 配布サイトに接続できず、ビルドできない。ビルドと実行は PC の Android Studio で行う

@@ -32,6 +32,16 @@
 - 列数(ピンチ)と年・月・日(メニュー)は独立。列数は `Prefs.columns`(3〜8、初期4)、年・月・日は `Prefs.group_mode`(初期値は月)
 - 先頭を見ている間は、同期で並びが変わっても先頭に留まる
 
+## スライドショー(SlideshowActivity)
+
+- **VideoView は再生開始前から VISIBLE にしておく。** 内部の `SurfaceView` は `visibility="gone"` のままだと生成されず、`MediaPlayer` の `onPrepared` がいつまでも呼ばれない(debug.md D10)。見た目はプログレスバーで覆って隠す
+- **VideoView を画面中央に出すには `layout_gravity="center"` が必須。** `VideoView` は動画のアスペクト比に合わせて自分のサイズを縮めるため、`FrameLayout` の子のデフォルト(左上寄せ)だと左上にずれる(debug.md D11)
+- 静止画のクロスフェードは `ImageView` を2枚(`photo_view`/`photo_view2`)重ねて持ち、直前も静止画だった場合だけ alpha アニメーションで同時にフェードイン/フェードアウトさせる。動画が絡む遷移はフェードなしで即切り替え(`previousWasPhoto` フラグで判定)
+- Bitmap は毎スライドで作り直すため、表示が終わった ImageView 側は明示的に `recycle()` して溜め込まない(60枚×ループが無限に続くため)
+- 60枚終わったら `SyncManager.requestSync()` を呼び、`state()` の LiveData を観測して「running が true になってから false に戻った」タイミングで同期完了と判断する(`running` が最初から false の可能性があるので、一度 true を見るまでは完了と判定しない)。完了後に `PhotoDao.listOnce()` で最新順の一覧を取り直し、先頭から新たに最大60枚を始める
+- 無限ループで一覧を入れ替えるため、「停止」でビューアに返す情報は一覧の位置(インデックス)ではなく写真・動画の **ID**。呼び出し元(`ViewerActivity`)は自分の持つ一覧を ID で線形探索して位置を合わせる
+- 既知の制約: 画面回転などでプロセスが Activity を再生成すると、`onCreate` は常に起動時の `pendingPhotos`(呼び出し元のビューアで固定したリスト)と `startPosition` から `slides` を組み立て直すため、ループで一覧を入れ替えた後に回転すると最初のループ開始状態に戻ってしまう。手厚く対応するなら、ループ後の一覧も `onSaveInstanceState` 等で保存する必要があるが、現状は未対応
+
 ## 画面全般
 
 - targetSdk 36 では常に全画面(edge-to-edge)表示になるため、各 Activity で `EdgeToEdge.enable` を呼び、レイアウトのルートに `android:fitsSystemWindows="true"` を付けて余白を確保している

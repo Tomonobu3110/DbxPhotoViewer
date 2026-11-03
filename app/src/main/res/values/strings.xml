@@ -17,4 +17,6 @@
     <string name="media_video">動画のみ</string>
     <string name="menu_refresh">更新</string>
     <string name="play_video">動画を再生</string>
+    <string name="slideshow_start">スライドショー開始</string>
+    <string name="slideshow_stop">スライドショーの停止</string>
 </resources>
