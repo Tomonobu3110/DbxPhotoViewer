@@ -17,7 +17,6 @@ public class Prefs {
     public static final String KEY_EXCLUDE_SMALL = "exclude_small";
     private static final String KEY_CREDENTIAL = "credential";
     private static final String KEY_GROUP_MODE = "group_mode";
-    private static final String KEY_MEDIA_FILTER = "media_filter";
     private static final String KEY_COLUMNS = "columns";
 
     /** 1行に並べるサムネイル数の範囲と初期値(ピンチで変更)。 */
@@ -28,9 +27,6 @@ public class Prefs {
     private static final String KEY_CURSOR_CONFIG = "cursor_config";
     private static final String KEY_LAST_SYNC = "last_sync";
 
-    public static final int MEDIA_ALL = 0;
-    public static final int MEDIA_PHOTO = 1;
-    public static final int MEDIA_VIDEO = 2;
 
     private final SharedPreferences sp;
 
@@ -91,14 +87,6 @@ public class Prefs {
 
     public void setColumns(int columns) {
         sp.edit().putInt(KEY_COLUMNS, columns).apply();
-    }
-
-    public int getMediaFilter() {
-        return sp.getInt(KEY_MEDIA_FILTER, MEDIA_ALL);
-    }
-
-    public void setMediaFilter(int filter) {
-        sp.edit().putInt(KEY_MEDIA_FILTER, filter).apply();
     }
 
     // ---- 同期状態 ----

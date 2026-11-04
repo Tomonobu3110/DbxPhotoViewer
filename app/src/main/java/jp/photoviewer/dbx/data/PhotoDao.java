@@ -14,20 +14,17 @@ public interface PhotoDao {
     /**
      * グリッド表示用。
      * excludeSmall=1 のとき、写真のうち 15KB 未満と png を除外する(公式アプリと同じ)。
-     * media: 0=すべて, 1=写真のみ, 2=動画のみ。
      */
     @Query("SELECT * FROM photos WHERE "
             + "(:excludeSmall = 0 OR is_video = 1 OR (size >= 15360 AND ext != 'png')) "
-            + "AND (:media = 0 OR (:media = 1 AND is_video = 0) OR (:media = 2 AND is_video = 1)) "
             + "ORDER BY sort_time DESC, name DESC")
-    LiveData<List<PhotoEntity>> observe(int excludeSmall, int media);
+    LiveData<List<PhotoEntity>> observe(int excludeSmall);
 
     /** スライドショーの再起動用。observe() と同じ条件・並びを一度だけ取得する。 */
     @Query("SELECT * FROM photos WHERE "
             + "(:excludeSmall = 0 OR is_video = 1 OR (size >= 15360 AND ext != 'png')) "
-            + "AND (:media = 0 OR (:media = 1 AND is_video = 0) OR (:media = 2 AND is_video = 1)) "
             + "ORDER BY sort_time DESC, name DESC")
-    List<PhotoEntity> listOnce(int excludeSmall, int media);
+    List<PhotoEntity> listOnce(int excludeSmall);
 
     @Query("SELECT * FROM photos WHERE id IN (:ids)")
     List<PhotoEntity> findByIds(List<String> ids);

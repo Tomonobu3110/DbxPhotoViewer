@@ -30,28 +30,6 @@ public class GalleryViewModel extends AndroidViewModel {
     /** 同期中は DB 更新が続くので、少し待ってからまとめて組み立て直す。 */
     private static final long REBUILD_DELAY_MS = 300;
 
-    private static final class Filter {
-        final boolean excludeSmall;
-        final int media;
-
-        Filter(boolean excludeSmall, int media) {
-            this.excludeSmall = excludeSmall;
-            this.media = media;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof Filter)) return false;
-            Filter f = (Filter) o;
-            return excludeSmall == f.excludeSmall && media == f.media;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(excludeSmall, media);
-        }
-    }
-
     public static final class Gallery {
         public final List<GalleryItem> items;
         public final List<PhotoEntity> photos;
@@ -65,7 +43,8 @@ public class GalleryViewModel extends AndroidViewModel {
     }
 
     private final Prefs prefs;
-    private final MutableLiveData<Filter> filter = new MutableLiveData<>();
+    /** 「小さい画像と PNG を除外」の設定。 */
+    private final MutableLiveData<Boolean> excludeSmall = new MutableLiveData<>();
     private final MutableLiveData<GroupMode> groupMode = new MutableLiveData<>();
     private final MediatorLiveData<Gallery> gallery = new MediatorLiveData<>();
     private final ExecutorService builder = Executors.newSingleThreadExecutor();
@@ -80,12 +59,12 @@ public class GalleryViewModel extends AndroidViewModel {
         super(application);
         prefs = App.get().prefs();
         groupMode.setValue(prefs.getGroupMode());
-        filter.setValue(currentFilter());
+        excludeSmall.setValue(prefs.isExcludeSmall());
 
-        // フィルタが変わるたびに DB の監視対象を差し替える(switchMap 相当)
-        gallery.addSource(filter, (Observer<Filter>) f -> {
+        // 除外設定が変わるたびに DB の監視対象を差し替える(switchMap 相当)
+        gallery.addSource(excludeSmall, (Observer<Boolean>) exclude -> {
             if (currentSource != null) gallery.removeSource(currentSource);
-            currentSource = App.get().database().photos().observe(f.excludeSmall ? 1 : 0, f.media);
+            currentSource = App.get().database().photos().observe(Boolean.TRUE.equals(exclude) ? 1 : 0);
             gallery.addSource(currentSource, (Observer<List<PhotoEntity>>) list -> {
                 boolean first = latestPhotos.isEmpty();
                 latestPhotos = list != null ? list : Collections.emptyList();
@@ -109,23 +88,10 @@ public class GalleryViewModel extends AndroidViewModel {
         groupMode.setValue(mode);
     }
 
-    public int getMediaFilter() {
-        return prefs.getMediaFilter();
-    }
-
-    public void setMediaFilter(int media) {
-        prefs.setMediaFilter(media);
-        reloadFilter();
-    }
-
-    /** 設定画面から戻ったときなどに、フィルタ設定を読み直す。 */
+    /** 設定画面から戻ったときなどに、除外設定を読み直す。 */
     public void reloadFilter() {
-        Filter f = currentFilter();
-        if (!f.equals(filter.getValue())) filter.setValue(f);
-    }
-
-    private Filter currentFilter() {
-        return new Filter(prefs.isExcludeSmall(), prefs.getMediaFilter());
+        boolean v = prefs.isExcludeSmall();
+        if (!Boolean.valueOf(v).equals(excludeSmall.getValue())) excludeSmall.setValue(v);
     }
 
     private void scheduleRebuild(long delay) {

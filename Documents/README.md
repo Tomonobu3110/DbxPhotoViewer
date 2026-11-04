@@ -9,6 +9,7 @@ DBXフォトビューア(Dropbox 閲覧専用 Android 写真ビューア)の開�
 | [setup.md](setup.md) | 開発環境、プロジェクト構成、Dropbox アプリ登録、ビルド手順、作業上の注意 |
 | [implementation-notes.md](implementation-notes.md) | 実装上の重要な判断と、その理由(コードを読む前に知っておくべきこと) |
 | [history.md](history.md) | 日付ごとの作業履歴 |
+| [release-plan.md](release-plan.md) | Google Play 一般公開までの手順とチェックリスト |
 | [../DESIGN.md](../DESIGN.md) | 設計書(画面仕様・API・データ・同期・キャッシュ) |
 
 ## 次回の始め方

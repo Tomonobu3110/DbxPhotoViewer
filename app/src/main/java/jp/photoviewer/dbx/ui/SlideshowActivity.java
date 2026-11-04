@@ -356,7 +356,7 @@ public class SlideshowActivity extends AppCompatActivity {
     private void reloadLatestAndRestart(int gen) {
         App.get().io().execute(() -> {
             List<PhotoEntity> fresh = App.get().database().photos().listOnce(
-                    App.get().prefs().isExcludeSmall() ? 1 : 0, App.get().prefs().getMediaFilter());
+                    App.get().prefs().isExcludeSmall() ? 1 : 0);
             runOnUiThread(() -> {
                 if (gen != requestGen) return;
                 if (fresh.isEmpty()) {

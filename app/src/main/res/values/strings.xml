@@ -11,10 +11,6 @@
     <string name="group_day">日</string>
     <string name="group_month">月</string>
     <string name="group_year">年</string>
-    <string name="menu_media">表示種別</string>
-    <string name="media_all">すべて</string>
-    <string name="media_photo">写真のみ</string>
-    <string name="media_video">動画のみ</string>
     <string name="menu_refresh">更新</string>
     <string name="play_video">動画を再生</string>
     <string name="slideshow_start">スライドショー開始</string>

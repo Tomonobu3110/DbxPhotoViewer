@@ -320,18 +320,12 @@ public class MainActivity extends AppCompatActivity {
     public boolean onPrepareOptionsMenu(Menu menu) {
         boolean loggedIn = dropbox.isLoggedIn();
         menu.findItem(R.id.menu_group).setVisible(loggedIn);
-        menu.findItem(R.id.menu_media).setVisible(loggedIn);
         menu.findItem(R.id.menu_refresh).setVisible(loggedIn);
 
         switch (viewModel.getGroupMode()) {
             case YEAR: menu.findItem(R.id.group_year).setChecked(true); break;
             case MONTH: menu.findItem(R.id.group_month).setChecked(true); break;
             default: menu.findItem(R.id.group_day).setChecked(true); break;
-        }
-        switch (viewModel.getMediaFilter()) {
-            case Prefs.MEDIA_PHOTO: menu.findItem(R.id.media_photo).setChecked(true); break;
-            case Prefs.MEDIA_VIDEO: menu.findItem(R.id.media_video).setChecked(true); break;
-            default: menu.findItem(R.id.media_all).setChecked(true); break;
         }
         return super.onPrepareOptionsMenu(menu);
     }
@@ -345,12 +339,6 @@ public class MainActivity extends AppCompatActivity {
             viewModel.setGroupMode(GroupMode.MONTH);
         } else if (id == R.id.group_year) {
             viewModel.setGroupMode(GroupMode.YEAR);
-        } else if (id == R.id.media_all) {
-            viewModel.setMediaFilter(Prefs.MEDIA_ALL);
-        } else if (id == R.id.media_photo) {
-            viewModel.setMediaFilter(Prefs.MEDIA_PHOTO);
-        } else if (id == R.id.media_video) {
-            viewModel.setMediaFilter(Prefs.MEDIA_VIDEO);
         } else if (id == R.id.menu_refresh) {
             swipe.setRefreshing(true);
             sync.requestSync();

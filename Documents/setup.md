@@ -17,21 +17,21 @@ Dropbox SDK を 8.x にしないのは、8.x が Java 21 を必要とするた�
 
 ## 実行環境
 
-- 実機: Sony XQ-CQ44(Android 14 / API 34)
+- 実機: Android 14(API 34)のスマートフォン
 - エミュレータ: Pixel 3a API 35
 
 ## Dropbox アプリ登録(App Console)
 
 | 項目 | 値 |
 |---|---|
-| アプリ名 | `PhotoFolderViewer-tsaito` |
+| アプリ名 | (個人名を含むため記載しない。App Console で確認) |
 | 種類 | スコープ付きアクセス / Dropbox へのフルアクセス |
 | 権限 | `files.metadata.read`、`files.content.read`(読み取りのみ)。`account_info.read` は既定で付く |
 | App key | `bfcws1euvef6b98`(公開されても問題ない識別子。App secret は使わない) |
 | 状態 | 開発(自分のアカウントのみで使う分には問題なし) |
 
 - App key は `local.properties` の `dropbox.appKey=` に書く。`local.properties` は Git 管理外
-- 同じ App Console にある `ManaHinaViewer` は別のアプリ。触らない
+- 同じ App Console にある別のアプリには触らない
 - 権限を後から変えた場合は、アプリでログアウトして再接続する
 
 ## ビルド・実行の手順

@@ -17,19 +17,6 @@
     </item>
 
     <item
-        android:id="@+id/menu_media"
-        android:title="@string/menu_media"
-        app:showAsAction="never">
-        <menu>
-            <group android:checkableBehavior="single">
-                <item android:id="@+id/media_all" android:title="@string/media_all" />
-                <item android:id="@+id/media_photo" android:title="@string/media_photo" />
-                <item android:id="@+id/media_video" android:title="@string/media_video" />
-            </group>
-        </menu>
-    </item>
-
-    <item
         android:id="@+id/menu_refresh"
         android:title="@string/menu_refresh"
         app:showAsAction="never" />
