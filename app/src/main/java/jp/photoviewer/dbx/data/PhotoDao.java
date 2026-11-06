@@ -20,11 +20,11 @@ public interface PhotoDao {
             + "ORDER BY sort_time DESC, name DESC")
     LiveData<List<PhotoEntity>> observe(int excludeSmall);
 
-    /** スライドショーの再起動用。observe() と同じ条件・並びを一度だけ取得する。 */
+    /** スライドショーの再起動用。observe() と同じ条件・並びで、最新 limit 件だけ取得する。 */
     @Query("SELECT * FROM photos WHERE "
             + "(:excludeSmall = 0 OR is_video = 1 OR (size >= 15360 AND ext != 'png')) "
-            + "ORDER BY sort_time DESC, name DESC")
-    List<PhotoEntity> listOnce(int excludeSmall);
+            + "ORDER BY sort_time DESC, name DESC LIMIT :limit")
+    List<PhotoEntity> listOnce(int excludeSmall, int limit);
 
     @Query("SELECT * FROM photos WHERE id IN (:ids)")
     List<PhotoEntity> findByIds(List<String> ids);

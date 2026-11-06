@@ -27,6 +27,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -114,7 +115,7 @@ public class SlideshowActivity extends AppCompatActivity {
             return;
         }
         int count = Math.min(MAX_SLIDES, photos.size() - startPosition);
-        slides = photos.subList(startPosition, startPosition + count);
+        slides = new ArrayList<>(photos.subList(startPosition, startPosition + count));
 
         setContentView(R.layout.activity_slideshow);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -480,14 +481,14 @@ public class SlideshowActivity extends AppCompatActivity {
     private void reloadLatestAndRestart(int gen) {
         App.get().io().execute(() -> {
             List<PhotoEntity> fresh = App.get().database().photos().listOnce(
-                    App.get().prefs().isExcludeSmall() ? 1 : 0);
+                    App.get().prefs().isExcludeSmall() ? 1 : 0, MAX_SLIDES);
             runOnUiThread(() -> {
                 if (gen != requestGen) return;
                 if (fresh.isEmpty()) {
                     stopSlideshow();
                     return;
                 }
-                slides = fresh.subList(0, Math.min(MAX_SLIDES, fresh.size()));
+                slides = fresh;
                 showSlide(0);
             });
         });
