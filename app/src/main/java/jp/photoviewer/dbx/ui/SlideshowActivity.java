@@ -71,6 +71,15 @@ public class SlideshowActivity extends AppCompatActivity {
     @Nullable
     private Observer<SyncManager.State> syncObserver;
 
+    /** 次スライド用に先読み中/済みのデータの対象インデックス。slides 内の位置。 */
+    private int prefetchIndex = -1;
+    @Nullable
+    private Bitmap prefetchedBitmap;
+    @Nullable
+    private String prefetchedVideoLink;
+    /** スライド一覧の入れ替えや終了時にインクリメントし、進行中の先読みの結果を無効化する。 */
+    private int prefetchEpoch;
+
     private ImageView photoA;
     private ImageView photoB;
     /** 現在画面に表示中(または表示完了直前)の静止画 ImageView。静止画を表示していなければ null。 */
@@ -143,6 +152,8 @@ public class SlideshowActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
+        ++prefetchEpoch;
+        discardPrefetch();
         videoView.stopPlayback();
         clearAndRecycle(photoA);
         clearAndRecycle(photoB);
@@ -176,63 +187,174 @@ public class SlideshowActivity extends AppCompatActivity {
         currentSlide = slideIndex;
         PhotoEntity p = slides.get(slideIndex);
         counter.setText((slideIndex + 1) + " / " + slides.size());
-        progress.setVisibility(View.VISIBLE);
         int gen = ++requestGen;
 
+        if (!tryShowPrefetched(slideIndex, p, gen)) {
+            progress.setVisibility(View.VISIBLE);
+            if (p.isVideo) {
+                loadVideoFresh(gen, p);
+            } else {
+                loadPhotoFresh(gen, p);
+            }
+        }
+
+        // 今表示したスライドの間に、次のスライドの動画リンク取得・画像デコードを済ませておく。
+        prefetchNext(slideIndex);
+    }
+
+    /** 先読み済みのデータが使えればそれを表示する。表示できた場合 true を返す。 */
+    private boolean tryShowPrefetched(int slideIndex, PhotoEntity p, int gen) {
+        if (prefetchIndex != slideIndex) return false;
+
         if (p.isVideo) {
-            // 動画への切り替えはクロスフェードせず即切り替え。
+            if (prefetchedVideoLink == null) {
+                discardPrefetch();
+                return false;
+            }
+            String link = prefetchedVideoLink;
+            resetPrefetchFields();
             hidePhotoViewsNow();
             videoView.stopPlayback();
-            // VideoView(内部のSurfaceView)は visibility=GONE のままだと Surface が生成されず
-            // 再生準備が進まないため、再生開始前から VISIBLE にしておく(見た目はプログレスで覆う)。
             videoView.setVisibility(View.VISIBLE);
-            App.get().io().execute(() -> {
-                try {
-                    String link = App.get().dropbox().requireClient()
-                            .files().getTemporaryLink(p.id).getLink();
-                    runOnUiThread(() -> {
-                        if (gen != requestGen) return;
-                        playVideo(gen, link);
-                    });
-                } catch (Exception e) {
-                    runOnUiThread(() -> {
-                        if (gen != requestGen) return;
-                        showErrorAndSkip("動画のリンクを取得できませんでした");
-                    });
-                }
-            });
+            progress.setVisibility(View.VISIBLE);
+            playVideo(gen, link);
+            return true;
         } else {
+            if (prefetchedBitmap == null) {
+                discardPrefetch();
+                return false;
+            }
+            Bitmap bm = prefetchedBitmap;
+            resetPrefetchFields();
             videoView.stopPlayback();
             videoView.setVisibility(View.GONE);
+            progress.setVisibility(View.GONE);
+            showPhoto(bm);
+            scheduleAdvance(SLIDE_DURATION_MS);
+            return true;
+        }
+    }
+
+    private void loadVideoFresh(int gen, PhotoEntity p) {
+        // 動画への切り替えはクロスフェードせず即切り替え。
+        hidePhotoViewsNow();
+        videoView.stopPlayback();
+        // VideoView(内部のSurfaceView)は visibility=GONE のままだと Surface が生成されず
+        // 再生準備が進まないため、再生開始前から VISIBLE にしておく(見た目はプログレスで覆う)。
+        videoView.setVisibility(View.VISIBLE);
+        App.get().io().execute(() -> {
+            try {
+                String link = App.get().dropbox().requireClient()
+                        .files().getTemporaryLink(p.id).getLink();
+                runOnUiThread(() -> {
+                    if (gen != requestGen) return;
+                    playVideo(gen, link);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    if (gen != requestGen) return;
+                    showErrorAndSkip("動画のリンクを取得できませんでした");
+                });
+            }
+        });
+    }
+
+    private void loadPhotoFresh(int gen, PhotoEntity p) {
+        videoView.stopPlayback();
+        videoView.setVisibility(View.GONE);
+        App.get().previews().load(p, new PreviewLoader.Callback() {
+            @Override
+            public void onLoaded(File file) {
+                if (gen != requestGen) return;
+                App.get().io().execute(() -> {
+                    Bitmap bm = decodeForDisplay(file);
+                    runOnUiThread(() -> {
+                        if (gen != requestGen) {
+                            if (bm != null) bm.recycle();
+                            return;
+                        }
+                        if (bm == null) {
+                            showErrorAndSkip("画像を表示できません");
+                            return;
+                        }
+                        progress.setVisibility(View.GONE);
+                        showPhoto(bm);
+                        scheduleAdvance(SLIDE_DURATION_MS);
+                    });
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                if (gen != requestGen) return;
+                showErrorAndSkip(message);
+            }
+        });
+    }
+
+    /**
+     * 次のスライド(slideIndex + 1)の表示に必要なデータを先読みしておく。
+     * 動画は一時リンクの取得、静止画は表示用 Bitmap へのデコードまで済ませる。
+     * 60枚目から1枚目への折り返しは対象外(例外として許容)。
+     */
+    private void prefetchNext(int slideIndex) {
+        int nextIndex = slideIndex + 1;
+        if (nextIndex >= slides.size()) return;
+        if (prefetchIndex == nextIndex) return;
+        discardPrefetch();
+        prefetchIndex = nextIndex;
+        final int epoch = prefetchEpoch;
+        PhotoEntity p = slides.get(nextIndex);
+
+        if (p.isVideo) {
+            App.get().io().execute(() -> {
+                String link;
+                try {
+                    link = App.get().dropbox().requireClient()
+                            .files().getTemporaryLink(p.id).getLink();
+                } catch (Exception e) {
+                    return; // 失敗時は showSlide 側で通常通り取得し直す
+                }
+                runOnUiThread(() -> {
+                    if (epoch != prefetchEpoch || prefetchIndex != nextIndex) return;
+                    prefetchedVideoLink = link;
+                });
+            });
+        } else {
             App.get().previews().load(p, new PreviewLoader.Callback() {
                 @Override
                 public void onLoaded(File file) {
-                    if (gen != requestGen) return;
+                    if (epoch != prefetchEpoch || prefetchIndex != nextIndex) return;
                     App.get().io().execute(() -> {
                         Bitmap bm = decodeForDisplay(file);
                         runOnUiThread(() -> {
-                            if (gen != requestGen) {
+                            if (epoch != prefetchEpoch || prefetchIndex != nextIndex || bm == null) {
                                 if (bm != null) bm.recycle();
                                 return;
                             }
-                            if (bm == null) {
-                                showErrorAndSkip("画像を表示できません");
-                                return;
-                            }
-                            progress.setVisibility(View.GONE);
-                            showPhoto(bm);
-                            scheduleAdvance(SLIDE_DURATION_MS);
+                            prefetchedBitmap = bm;
                         });
                     });
                 }
 
                 @Override
                 public void onError(String message) {
-                    if (gen != requestGen) return;
-                    showErrorAndSkip(message);
+                    // 失敗時は showSlide 側で通常通り取得し直す
                 }
             });
         }
+    }
+
+    private void resetPrefetchFields() {
+        prefetchIndex = -1;
+        prefetchedBitmap = null;
+        prefetchedVideoLink = null;
+    }
+
+    /** 先読み結果を使わずに捨てる(Bitmap があれば recycle する)。 */
+    private void discardPrefetch() {
+        if (prefetchedBitmap != null) prefetchedBitmap.recycle();
+        resetPrefetchFields();
     }
 
     private void playVideo(int gen, String link) {
@@ -330,6 +452,8 @@ public class SlideshowActivity extends AppCompatActivity {
     /** 60枚終わったら Dropbox を同期し、最新の一覧を取得してまた先頭(最新)から60枚始める。 */
     private void restartFromLatest() {
         handler.removeCallbacks(advanceRunnable);
+        ++prefetchEpoch;
+        discardPrefetch();
         hidePhotoViewsNow();
         videoView.stopPlayback();
         videoView.setVisibility(View.GONE);
@@ -372,6 +496,8 @@ public class SlideshowActivity extends AppCompatActivity {
     private void stopSlideshow() {
         handler.removeCallbacks(advanceRunnable);
         ++requestGen;
+        ++prefetchEpoch;
+        discardPrefetch();
         if (syncObserver != null) {
             App.get().sync().state().removeObserver(syncObserver);
             syncObserver = null;
