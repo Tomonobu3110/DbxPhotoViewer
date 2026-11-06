@@ -1,5 +1,6 @@
 package jp.photoviewer.dbx.ui;
 
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -61,6 +62,7 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
         if (p.isVideo) {
             h.zoom.setVisibility(View.GONE);
             h.progress.setVisibility(View.GONE);
+            h.placeholder.setVisibility(View.GONE);
             h.videoThumb.setVisibility(View.VISIBLE);
             h.play.setVisibility(View.VISIBLE);
             App.get().thumbnails().load(h.videoThumb, p, R.drawable.ic_video);
@@ -75,11 +77,21 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
         h.zoom.recycle();
         h.zoom.setOnClickListener(v -> host.onPageTapped());
         h.progress.setVisibility(View.VISIBLE);
+
+        Bitmap thumb = App.get().thumbnails().getCachedBitmap(p);
+        if (thumb != null) {
+            h.placeholder.setImageBitmap(thumb);
+            h.placeholder.setVisibility(View.VISIBLE);
+        } else {
+            h.placeholder.setVisibility(View.GONE);
+        }
+
         h.task = App.get().previews().load(p, new PreviewLoader.Callback() {
             @Override
             public void onLoaded(File file) {
                 if (h.bound != p) return;
                 h.progress.setVisibility(View.GONE);
+                h.placeholder.setVisibility(View.GONE);
                 h.zoom.setImage(ImageSource.uri(Uri.fromFile(file)));
             }
 
@@ -87,6 +99,7 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
             public void onError(String message) {
                 if (h.bound != p) return;
                 h.progress.setVisibility(View.GONE);
+                h.placeholder.setVisibility(View.GONE);
                 h.error.setText(message);
                 h.error.setVisibility(View.VISIBLE);
             }
@@ -101,10 +114,12 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
             h.task = null;
         }
         h.zoom.recycle();
+        h.placeholder.setImageDrawable(null);
         App.get().thumbnails().cancel(h.videoThumb);
     }
 
     static final class PageHolder extends RecyclerView.ViewHolder {
+        final ImageView placeholder;
         final SubsamplingScaleImageView zoom;
         final ImageView videoThumb;
         final View play;
@@ -115,6 +130,7 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
 
         PageHolder(View v) {
             super(v);
+            placeholder = v.findViewById(R.id.placeholder);
             zoom = v.findViewById(R.id.zoom);
             videoThumb = v.findViewById(R.id.video_thumb);
             play = v.findViewById(R.id.play);

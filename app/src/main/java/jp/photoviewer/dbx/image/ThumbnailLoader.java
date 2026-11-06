@@ -123,6 +123,13 @@ public class ThumbnailLoader {
         });
     }
 
+    /** メモリキャッシュにあるサムネイルを即座に返す(無ければ null)。ネットワーク・ディスクへは行かない。 */
+    @Nullable
+    @MainThread
+    public Bitmap getCachedBitmap(PhotoEntity photo) {
+        return memory.get(photo.cacheKey());
+    }
+
     /** セルが再利用・破棄されるときに呼ぶ。 */
     @MainThread
     public void cancel(ImageView view) {
