@@ -17,6 +17,13 @@
     </item>
 
     <item
+        android:id="@+id/menu_jump_year"
+        android:title="@string/menu_jump_year"
+        app:showAsAction="never">
+        <menu />
+    </item>
+
+    <item
         android:id="@+id/menu_refresh"
         android:title="@string/menu_refresh"
         app:showAsAction="never" />

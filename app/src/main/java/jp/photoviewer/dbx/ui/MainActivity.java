@@ -8,8 +8,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.SubMenu;
 import android.view.View;
 import android.widget.TextView;
+
+import java.util.Calendar;
+import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -26,6 +30,7 @@ import com.google.android.material.snackbar.Snackbar;
 import jp.photoviewer.dbx.App;
 import jp.photoviewer.dbx.Prefs;
 import jp.photoviewer.dbx.R;
+import jp.photoviewer.dbx.data.PhotoEntity;
 import jp.photoviewer.dbx.dropbox.DropboxClientProvider;
 import jp.photoviewer.dbx.dropbox.SyncManager;
 
@@ -35,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private static final long AUTO_SYNC_INTERVAL_MS = 60_000;
     /** 先読みするサムネイルの件数(最新から)。 */
     private static final int PREFETCH_COUNT = 100;
+    /** 「年へ移動」サブメニューの項目に付けるグループID(リソースIDと衝突しない値)。 */
+    private static final int JUMP_YEAR_GROUP = 999_001;
 
     private DropboxClientProvider dropbox;
     private SyncManager sync;
@@ -169,6 +176,51 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         recycler.scrollToPosition(0);
+    }
+
+    /** 「年へ移動」サブメニューに、写真がある年を新しい順(降順)で並べる。 */
+    private void populateJumpYearMenu(MenuItem jumpYearItem) {
+        SubMenu subMenu = jumpYearItem.getSubMenu();
+        if (subMenu == null) return;
+        subMenu.clear();
+        List<PhotoEntity> photos = currentGallery != null ? currentGallery.photos : null;
+        if (photos == null || photos.isEmpty()) {
+            jumpYearItem.setVisible(false);
+            return;
+        }
+        jumpYearItem.setVisible(true);
+        Calendar cal = Calendar.getInstance();
+        int lastYear = Integer.MIN_VALUE;
+        int order = 0;
+        for (PhotoEntity p : photos) {
+            cal.setTimeInMillis(p.sortTime);
+            int year = cal.get(Calendar.YEAR);
+            if (year != lastYear) {
+                subMenu.add(JUMP_YEAR_GROUP, year, order++, year + "年");
+                lastYear = year;
+            }
+        }
+    }
+
+    /**
+     * 指定した年の中で最も新しい写真(見えている一覧の中でその年の最初の項目)までスクロールする。
+     * 写真は新しい順に並んでいるので、今年なら最新月、過去の年なら12月(データがあれば)が自然に出る。
+     */
+    private void jumpToYear(int year) {
+        if (currentGallery == null) return;
+        List<GalleryItem> items = currentGallery.items;
+        Calendar cal = Calendar.getInstance();
+        for (int i = 0; i < items.size(); i++) {
+            GalleryItem item = items.get(i);
+            if (item.photo == null) continue;
+            cal.setTimeInMillis(item.photo.sortTime);
+            if (cal.get(Calendar.YEAR) == year) {
+                // 直前に見出しがあれば、見出しごと見えるようにそこへ
+                int pos = (i > 0 && items.get(i - 1).type == GalleryItem.TYPE_HEADER) ? i - 1 : i;
+                layoutManager.scrollToPositionWithOffset(pos, 0);
+                return;
+            }
+        }
     }
 
     private void updateLoginUi() {
@@ -322,6 +374,10 @@ public class MainActivity extends AppCompatActivity {
         menu.findItem(R.id.menu_group).setVisible(loggedIn);
         menu.findItem(R.id.menu_refresh).setVisible(loggedIn);
 
+        MenuItem jumpYear = menu.findItem(R.id.menu_jump_year);
+        jumpYear.setVisible(loggedIn);
+        if (loggedIn) populateJumpYearMenu(jumpYear);
+
         switch (viewModel.getGroupMode()) {
             case YEAR: menu.findItem(R.id.group_year).setChecked(true); break;
             case MONTH: menu.findItem(R.id.group_month).setChecked(true); break;
@@ -332,6 +388,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getGroupId() == JUMP_YEAR_GROUP) {
+            jumpToYear(item.getItemId());
+            return true;
+        }
         int id = item.getItemId();
         if (id == R.id.group_day) {
             viewModel.setGroupMode(GroupMode.DAY);
