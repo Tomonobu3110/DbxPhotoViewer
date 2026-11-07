@@ -12,8 +12,10 @@ import android.view.SubMenu;
 import android.view.View;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -42,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int PREFETCH_COUNT = 100;
     /** 「年へ移動」サブメニューの項目に付けるグループID(リソースIDと衝突しない値)。 */
     private static final int JUMP_YEAR_GROUP = 999_001;
+    /** 「年へ移動」サブメニュー先頭の「ランダム」項目のID(年の値と衝突しない値)。 */
+    private static final int JUMP_YEAR_RANDOM_ID = 999_000;
 
     private DropboxClientProvider dropbox;
     private SyncManager sync;
@@ -189,9 +193,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         jumpYearItem.setVisible(true);
+        subMenu.add(JUMP_YEAR_GROUP, JUMP_YEAR_RANDOM_ID, 0, "ランダム");
         Calendar cal = Calendar.getInstance();
         int lastYear = Integer.MIN_VALUE;
-        int order = 0;
+        int order = 1;
         for (PhotoEntity p : photos) {
             cal.setTimeInMillis(p.sortTime);
             int year = cal.get(Calendar.YEAR);
@@ -221,6 +226,27 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
+    }
+
+    /** 表示可能な範囲(全写真)の年・月からランダムに1つ選び、その月の最新の写真へ飛ぶ。 */
+    private void jumpToRandom() {
+        if (currentGallery == null) return;
+        List<PhotoEntity> photos = currentGallery.photos;
+        if (photos.isEmpty()) return;
+        Calendar cal = Calendar.getInstance();
+        List<String> latestPhotoIdPerMonth = new ArrayList<>();
+        int lastKey = Integer.MIN_VALUE;
+        for (PhotoEntity p : photos) {
+            cal.setTimeInMillis(p.sortTime);
+            int key = cal.get(Calendar.YEAR) * 100 + cal.get(Calendar.MONTH);
+            if (key != lastKey) {
+                // 写真は新しい順に並んでいるため、その月で最初に出てくるものが最新
+                latestPhotoIdPerMonth.add(p.id);
+                lastKey = key;
+            }
+        }
+        String targetId = latestPhotoIdPerMonth.get(new Random().nextInt(latestPhotoIdPerMonth.size()));
+        scrollToPhoto(currentGallery, targetId);
     }
 
     private void updateLoginUi() {
@@ -389,7 +415,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getGroupId() == JUMP_YEAR_GROUP) {
-            jumpToYear(item.getItemId());
+            if (item.getItemId() == JUMP_YEAR_RANDOM_ID) {
+                jumpToRandom();
+            } else {
+                jumpToYear(item.getItemId());
+            }
             return true;
         }
         int id = item.getItemId();

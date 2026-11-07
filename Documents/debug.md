@@ -73,6 +73,13 @@
 - 対応: ツールバーに `app:popupTheme="@style/ThemeOverlay.Material3.Light"` を指定し、オーバーフローのドロップダウンを明るい配色(黒文字/白背景)に固定した
 - 教訓: ダークテーマの画面にオーバーフローメニューを置くときは、ドロップダウンの配色を `popupTheme` で明示しておくと安全
 
+## D13. 「ランダム」追加後、メニューを開く操作全般でクラッシュ — 解決済
+
+- 現象: 「年へ移動」サブメニューに「ランダム」項目を追加した直後から、オーバーフローメニューを開くなど広い範囲の操作でクラッシュするようになった
+- 原因: `subMenu.add(group, id, order, title)` の `order` に `-1` を渡していた。AppCompat の `MenuBuilder` は `order` の上位ビットからカテゴリを読み取る仕様で、`-1`(全ビット1)はどのカテゴリにも一致せず `IllegalArgumentException: order does not contain a valid category` を投げる。`populateJumpYearMenu()` は `onPrepareOptionsMenu()` のたびに呼ばれる(＝オーバーフローメニューを開くたびに実行される)ため、メニューを開くだけで広範囲に落ちていた
+- 対応: `order` を 0 以上の値に修正(「ランダム」を 0、各年を 1 以降)
+- 教訓: AppCompat のメニューに項目を追加するとき、先頭に出したいからといって `order` に負の値を使わない。`Menu.FIRST` や 0 を基準に組み立てる
+
 ## 作業環境起因の問題(参考)
 
 - Claude のクラウド作業環境からは Google Maven / Maven Central / Gradle 配布サイトに接続できず、ビルドできない。ビルドと実行は PC の Android Studio で行う
