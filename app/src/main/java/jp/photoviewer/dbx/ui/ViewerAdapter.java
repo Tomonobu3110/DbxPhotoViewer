@@ -30,6 +30,8 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
     public interface Host {
         void onPageTapped();
         void onPlayVideo(PhotoEntity photo);
+        /** ズーム表示用の画像ファイルが用意できた(共有メニューの有効化に使う)。 */
+        void onPreviewReady(PhotoEntity photo, File file);
     }
 
     private final List<PhotoEntity> photos;
@@ -93,6 +95,7 @@ public class ViewerAdapter extends RecyclerView.Adapter<ViewerAdapter.PageHolder
                 h.progress.setVisibility(View.GONE);
                 h.placeholder.setVisibility(View.GONE);
                 h.zoom.setImage(ImageSource.uri(Uri.fromFile(file)));
+                host.onPreviewReady(p, file);
             }
 
             @Override

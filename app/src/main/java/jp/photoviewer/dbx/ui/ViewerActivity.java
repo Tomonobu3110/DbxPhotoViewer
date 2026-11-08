@@ -18,10 +18,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
@@ -48,6 +50,10 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
     private MaterialToolbar toolbar;
     private boolean overlayVisible = true;
     private ActivityResultLauncher<Intent> slideshowLauncher;
+
+    /** 現在表示中の写真について、共有できる画像ファイルが用意できていれば保持する。 */
+    private String readyPhotoId;
+    private File readyFile;
 
     public static void start(Context context, List<PhotoEntity> photos, int position) {
         pendingPhotos = photos;
@@ -108,6 +114,9 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
         pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
+                readyPhotoId = null;
+                readyFile = null;
+                invalidateOptionsMenu();
                 showInfo(position);
             }
         });
@@ -138,12 +147,46 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
     }
 
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // 画像の読み込みが終わるまで(動画のページでは常に)共有メニューをグレーアウトする
+        boolean ready = readyFile != null
+                && readyPhotoId != null
+                && readyPhotoId.equals(photos.get(pager.getCurrentItem()).id);
+        menu.findItem(R.id.menu_share).setEnabled(ready);
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.menu_slideshow) {
             SlideshowActivity.start(this, slideshowLauncher, photos, pager.getCurrentItem());
             return true;
         }
+        if (item.getItemId() == R.id.menu_share) {
+            sharePhoto();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    /** ビューアに表示中の画像ファイル(キャッシュ済みプレビュー)をそのまま他アプリに渡す。 */
+    private void sharePhoto() {
+        if (readyFile == null) return;
+        Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", readyFile);
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("image/jpeg");
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, null));
+    }
+
+    @Override
+    public void onPreviewReady(PhotoEntity photo, File file) {
+        if (pager.getCurrentItem() < 0 || pager.getCurrentItem() >= photos.size()) return;
+        if (!photos.get(pager.getCurrentItem()).id.equals(photo.id)) return;
+        readyPhotoId = photo.id;
+        readyFile = file;
+        invalidateOptionsMenu();
     }
 
     @Override

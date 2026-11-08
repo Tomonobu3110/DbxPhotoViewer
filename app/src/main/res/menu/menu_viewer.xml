@@ -6,4 +6,9 @@
         android:id="@+id/menu_slideshow"
         android:title="@string/slideshow_start"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_share"
+        android:title="@string/share_photo"
+        app:showAsAction="never" />
 </menu>
