@@ -51,6 +51,12 @@ public class PreviewLoader {
         this.executor = executor;
     }
 
+    /** すでにキャッシュ済みならファイルを返す(未キャッシュなら null)。ダウンロードはしない。 */
+    @Nullable
+    public File getCachedFile(PhotoEntity photo) {
+        return cache.get(photo.cacheKey() + "#preview");
+    }
+
     public Future<?> load(PhotoEntity photo, Callback callback) {
         return executor.submit(() -> {
             try {

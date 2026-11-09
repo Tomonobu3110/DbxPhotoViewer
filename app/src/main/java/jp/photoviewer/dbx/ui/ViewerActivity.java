@@ -114,12 +114,12 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
         pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
-                readyPhotoId = null;
-                readyFile = null;
+                updateReadyState(position);
                 invalidateOptionsMenu();
                 showInfo(position);
             }
         });
+        updateReadyState(start);
         showInfo(start);
     }
 
@@ -127,6 +127,19 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (pager != null) outState.putInt(STATE_POSITION, pager.getCurrentItem());
+    }
+
+    /**
+     * 表示中ページのプレビューがすでにキャッシュ済みなら共有可能にする。
+     * ViewPager2 は offscreenPageLimit で先読み済みのページを再バインドしないため、
+     * 読み込み完了時のコールバック(onPreviewReady)だけでは、既に読み込み済みのページに
+     * スワイプで戻った/進んだ場合に共有が有効化されないことがある。
+     */
+    private void updateReadyState(int position) {
+        PhotoEntity p = photos.get(position);
+        File cached = p.isVideo ? null : App.get().previews().getCachedFile(p);
+        readyPhotoId = cached != null ? p.id : null;
+        readyFile = cached;
     }
 
     private void showInfo(int position) {
