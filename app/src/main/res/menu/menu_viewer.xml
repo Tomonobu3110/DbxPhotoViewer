@@ -8,6 +8,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_slideshow_random"
+        android:title="@string/slideshow_random_start"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_share"
         android:title="@string/share_photo"
         app:showAsAction="never" />

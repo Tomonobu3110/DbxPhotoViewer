@@ -43,6 +43,7 @@
 - 60枚終わったら `SyncManager.requestSync()` を呼び、`state()` の LiveData を観測して「running が true になってから false に戻った」タイミングで同期完了と判断する(`running` が最初から false の可能性があるので、一度 true を見るまでは完了と判定しない)。完了後に `PhotoDao.listOnce()` で最新順の一覧を取り直し、先頭から新たに最大60枚を始める
 - 無限ループで一覧を入れ替えるため、「停止」でビューアに返す情報は一覧の位置(インデックス)ではなく写真・動画の **ID**。呼び出し元(`ViewerActivity`)は自分の持つ一覧を ID で線形探索して位置を合わせる
 - 既知の制約: 画面回転などでプロセスが Activity を再生成すると、`onCreate` は常に起動時の `pendingPhotos`(呼び出し元のビューアで固定したリスト)と `startPosition` から `slides` を組み立て直すため、ループで一覧を入れ替えた後に回転すると最初のループ開始状態に戻ってしまう。手厚く対応するなら、ループ後の一覧も `onSaveInstanceState` 等で保存する必要があるが、現状は未対応
+- **ランダムスライドショー**(R21): `isRandomMode`(Intent の `EXTRA_RANDOM`)で通常モードと分岐する。60枚は「過去方向30枚」(`photos.subList()`、通常モードの count=60 版と同じロジックで count=30)と「全期間からランダムに選んだ30枚」(`PhotoDao.randomSample()`、`ORDER BY RANDOM() LIMIT`)を `interleave()` で交互に結合して作る。ランダム30枚は過去方向30枚のIDを `NOT IN` で除外して取得するため、この2つの間で重複は出ない(クエリ1本で済むため採用。ループをまたいだ重複までは追跡せず許容している)。初回は `onCreate` でDB問い合わせが必要なため、通常モードのように同期的に `slides` を組み立てられない。先にビュー初期化とプログレス表示だけ済ませ、`loadRandomHalfAndStart()` で非同期にランダム30枚を取ってから最初のスライドを表示する。60枚終了後のループ再開(`reloadLatestAndRestart()`)も同様に分岐し、「最新30枚」+「新たなランダム30枚」で作り直す
 
 ## 画面全般
 

@@ -172,7 +172,11 @@ public class ViewerActivity extends AppCompatActivity implements ViewerAdapter.H
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.menu_slideshow) {
-            SlideshowActivity.start(this, slideshowLauncher, photos, pager.getCurrentItem());
+            SlideshowActivity.start(this, slideshowLauncher, photos, pager.getCurrentItem(), false);
+            return true;
+        }
+        if (item.getItemId() == R.id.menu_slideshow_random) {
+            SlideshowActivity.start(this, slideshowLauncher, photos, pager.getCurrentItem(), true);
             return true;
         }
         if (item.getItemId() == R.id.menu_share) {

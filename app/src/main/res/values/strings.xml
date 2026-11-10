@@ -15,6 +15,7 @@
     <string name="menu_jump_year">年へ移動</string>
     <string name="play_video">動画を再生</string>
     <string name="slideshow_start">スライドショー開始</string>
+    <string name="slideshow_random_start">ランダムスライドショー</string>
     <string name="share_photo">共有する</string>
     <string name="slideshow_stop">スライドショーの停止</string>
 </resources>

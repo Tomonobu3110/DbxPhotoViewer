@@ -41,15 +41,21 @@ import jp.photoviewer.dbx.image.PreviewLoader;
  * 現在の写真から過去方向へ最大60枚をスライドショー表示する。
  * 静止画・動画ともに1枚30秒。動画は無音・ループ再生。
  * 60枚終わったら Dropbox を同期し、最新の写真・動画を起点に次の60枚を再生する(無限ループ)。
+ *
+ * ランダムモード(isRandomMode)では、60枚は「過去方向30枚」と「全期間からランダムに選んだ30枚」を
+ * 交互に並べたものになる。ループ時も同様に、最新30枚+新たに選んだランダム30枚で作り直す。
  */
 public class SlideshowActivity extends AppCompatActivity {
 
     /** 停止時に返す、現在表示中の写真・動画のID(呼び出し元のリストでの位置を探すため)。 */
     public static final String EXTRA_RESULT_PHOTO_ID = "result_photo_id";
     private static final String EXTRA_START_POSITION = "start_position";
+    private static final String EXTRA_RANDOM = "random";
     private static final String STATE_CURRENT_SLIDE = "state_current_slide";
 
     private static final int MAX_SLIDES = 60;
+    /** ランダムモードでの、過去方向側・ランダム側それぞれの枚数。 */
+    private static final int HALF_SLIDES = 30;
     private static final long SLIDE_DURATION_MS = 30_000;
     private static final long ERROR_SKIP_MS = 2_000;
     private static final long BAR_TIMEOUT_MS = 10_000;
@@ -62,6 +68,7 @@ public class SlideshowActivity extends AppCompatActivity {
 
     private List<PhotoEntity> slides;
     private int startPosition;
+    private boolean isRandomMode;
     private int currentSlide;
     private int requestGen;
 
@@ -94,10 +101,11 @@ public class SlideshowActivity extends AppCompatActivity {
     private View bottomBar;
 
     public static void start(Context context, ActivityResultLauncher<Intent> launcher,
-                              List<PhotoEntity> photos, int position) {
+                              List<PhotoEntity> photos, int position, boolean random) {
         pendingPhotos = photos;
         Intent i = new Intent(context, SlideshowActivity.class);
         i.putExtra(EXTRA_START_POSITION, position);
+        i.putExtra(EXTRA_RANDOM, random);
         launcher.launch(i);
     }
 
@@ -110,12 +118,11 @@ public class SlideshowActivity extends AppCompatActivity {
 
         List<PhotoEntity> photos = pendingPhotos;
         startPosition = getIntent().getIntExtra(EXTRA_START_POSITION, 0);
+        isRandomMode = getIntent().getBooleanExtra(EXTRA_RANDOM, false);
         if (photos.isEmpty() || startPosition < 0 || startPosition >= photos.size()) {
             finish();
             return;
         }
-        int count = Math.min(MAX_SLIDES, photos.size() - startPosition);
-        slides = new ArrayList<>(photos.subList(startPosition, startPosition + count));
 
         setContentView(R.layout.activity_slideshow);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -138,8 +145,18 @@ public class SlideshowActivity extends AppCompatActivity {
         });
 
         int start = savedInstanceState != null ? savedInstanceState.getInt(STATE_CURRENT_SLIDE) : 0;
-        start = Math.max(0, Math.min(slides.size() - 1, start));
-        showSlide(start);
+        if (isRandomMode) {
+            int seqCount = Math.min(HALF_SLIDES, photos.size() - startPosition);
+            List<PhotoEntity> sequential = new ArrayList<>(
+                    photos.subList(startPosition, startPosition + seqCount));
+            progress.setVisibility(View.VISIBLE);
+            loadRandomHalfAndStart(sequential, start);
+        } else {
+            int count = Math.min(MAX_SLIDES, photos.size() - startPosition);
+            slides = new ArrayList<>(photos.subList(startPosition, startPosition + count));
+            start = Math.max(0, Math.min(slides.size() - 1, start));
+            showSlide(start);
+        }
         showBottomBar();
     }
 
@@ -477,11 +494,23 @@ public class SlideshowActivity extends AppCompatActivity {
         App.get().sync().requestSync();
     }
 
-    /** 同期完了後、DB から最新の一覧を取得して先頭(最新)から新たに最大60枚を始める。 */
+    /**
+     * 同期完了後、DB から最新の一覧を取得して先頭(最新)から新たに最大60枚を始める。
+     * ランダムモードでは「最新30枚」+新たに選んだ「ランダム30枚」で作り直す。
+     */
     private void reloadLatestAndRestart(int gen) {
         App.get().io().execute(() -> {
-            List<PhotoEntity> fresh = App.get().database().photos().listOnce(
-                    App.get().prefs().isExcludeSmall() ? 1 : 0, MAX_SLIDES);
+            int excludeSmall = App.get().prefs().isExcludeSmall() ? 1 : 0;
+            List<PhotoEntity> fresh;
+            if (isRandomMode) {
+                List<PhotoEntity> latest = App.get().database().photos()
+                        .listOnce(excludeSmall, HALF_SLIDES);
+                List<PhotoEntity> random = App.get().database().photos()
+                        .randomSample(excludeSmall, idsOf(latest), HALF_SLIDES);
+                fresh = interleave(latest, random);
+            } else {
+                fresh = App.get().database().photos().listOnce(excludeSmall, MAX_SLIDES);
+            }
             runOnUiThread(() -> {
                 if (gen != requestGen) return;
                 if (fresh.isEmpty()) {
@@ -492,6 +521,41 @@ public class SlideshowActivity extends AppCompatActivity {
                 showSlide(0);
             });
         });
+    }
+
+    /**
+     * ランダムモードの初回開始用。渡された過去方向30枚に加えて、DB から全期間のランダム30枚を
+     * (過去方向30枚と重複しないように)取得し、交互に並べてから最初のスライドを表示する。
+     */
+    private void loadRandomHalfAndStart(List<PhotoEntity> sequential, int start) {
+        final int gen = requestGen;
+        App.get().io().execute(() -> {
+            int excludeSmall = App.get().prefs().isExcludeSmall() ? 1 : 0;
+            List<PhotoEntity> random = App.get().database().photos()
+                    .randomSample(excludeSmall, idsOf(sequential), HALF_SLIDES);
+            runOnUiThread(() -> {
+                if (gen != requestGen) return;
+                slides = interleave(sequential, random);
+                showSlide(Math.max(0, Math.min(slides.size() - 1, start)));
+            });
+        });
+    }
+
+    private static List<String> idsOf(List<PhotoEntity> photos) {
+        List<String> ids = new ArrayList<>(photos.size());
+        for (PhotoEntity p : photos) ids.add(p.id);
+        return ids;
+    }
+
+    /** 2つのリストを先頭から交互に並べる(a[0], b[0], a[1], b[1], ...)。長さが違う場合は残りをそのまま続ける。 */
+    private static List<PhotoEntity> interleave(List<PhotoEntity> a, List<PhotoEntity> b) {
+        List<PhotoEntity> result = new ArrayList<>(a.size() + b.size());
+        int max = Math.max(a.size(), b.size());
+        for (int i = 0; i < max; i++) {
+            if (i < a.size()) result.add(a.get(i));
+            if (i < b.size()) result.add(b.get(i));
+        }
+        return result;
     }
 
     private void stopSlideshow() {

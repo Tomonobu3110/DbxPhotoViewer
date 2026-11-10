@@ -26,6 +26,16 @@ public interface PhotoDao {
             + "ORDER BY sort_time DESC, name DESC LIMIT :limit")
     List<PhotoEntity> listOnce(int excludeSmall, int limit);
 
+    /**
+     * ランダムスライドショー用。observe() と同じ除外条件で、全期間からランダムに limit 件取得する。
+     * excludeIds に含まれる ID は選ばない(過去方向側と重複させないため)。
+     */
+    @Query("SELECT * FROM photos WHERE "
+            + "(:excludeSmall = 0 OR is_video = 1 OR (size >= 15360 AND ext != 'png')) "
+            + "AND id NOT IN (:excludeIds) "
+            + "ORDER BY RANDOM() LIMIT :limit")
+    List<PhotoEntity> randomSample(int excludeSmall, List<String> excludeIds, int limit);
+
     @Query("SELECT * FROM photos WHERE id IN (:ids)")
     List<PhotoEntity> findByIds(List<String> ids);
 
